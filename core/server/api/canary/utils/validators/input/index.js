@@ -23,12 +23,20 @@ module.exports = {
         return require('./invitations');
     },
 
+    get members() {
+        return require('./members');
+    },
+
     get settings() {
         return require('./settings');
     },
 
     get tags() {
         return require('./tags');
+    },
+
+    get labels() {
+        return require('./labels');
     },
 
     get users() {

@@ -2,7 +2,7 @@ const models = require('../../models');
 const common = require('../../lib/common');
 const urlUtils = require('../../lib/url-utils');
 const allowedIncludes = ['tags', 'authors', 'authors.roles'];
-const unsafeAttrs = ['status', 'authors'];
+const unsafeAttrs = ['status', 'authors', 'visibility'];
 
 module.exports = {
     docName: 'posts',
@@ -191,7 +191,7 @@ module.exports = {
             frame.options.require = true;
 
             return models.Post.destroy(frame.options)
-                .return(null)
+                .then(() => null)
                 .catch(models.Post.NotFoundError, () => {
                     throw new common.errors.NotFoundError({
                         message: common.i18n.t('errors.api.posts.postNotFound')

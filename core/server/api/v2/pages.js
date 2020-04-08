@@ -2,7 +2,7 @@ const models = require('../../models');
 const common = require('../../lib/common');
 const urlUtils = require('../../lib/url-utils');
 const ALLOWED_INCLUDES = ['tags', 'authors', 'authors.roles'];
-const UNSAFE_ATTRS = ['status', 'authors'];
+const UNSAFE_ATTRS = ['status', 'authors', 'visibility'];
 
 module.exports = {
     docName: 'pages',
@@ -85,12 +85,16 @@ module.exports = {
         statusCode: 201,
         headers: {},
         options: [
-            'include'
+            'include',
+            'source'
         ],
         validation: {
             options: {
                 include: {
                     values: ALLOWED_INCLUDES
+                },
+                source: {
+                    values: ['html']
                 }
             }
         },
@@ -117,6 +121,7 @@ module.exports = {
         options: [
             'include',
             'id',
+            'source',
             // NOTE: only for internal context
             'forUpdate',
             'transacting'
@@ -128,6 +133,9 @@ module.exports = {
                 },
                 id: {
                     required: true
+                },
+                source: {
+                    values: ['html']
                 }
             }
         },
@@ -188,7 +196,7 @@ module.exports = {
             frame.options.require = true;
 
             return models.Post.destroy(frame.options)
-                .return(null)
+                .then(() => null)
                 .catch(models.Post.NotFoundError, () => {
                     throw new common.errors.NotFoundError({
                         message: common.i18n.t('errors.api.pages.pageNotFound')

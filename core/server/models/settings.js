@@ -6,6 +6,7 @@ const Promise = require('bluebird'),
     ghostBookshelf = require('./base'),
     common = require('../lib/common'),
     validation = require('../data/validation'),
+    settingsCache = require('../services/settings/cache'),
     internalContext = {context: {internal: true}};
 
 let Settings, defaultSettings;
@@ -15,6 +16,16 @@ const doBlock = fn => fn();
 const getMembersKey = doBlock(() => {
     let UNO_KEYPAIRINO;
     return function getMembersKey(type) {
+        if (!UNO_KEYPAIRINO) {
+            UNO_KEYPAIRINO = keypair({bits: 1024});
+        }
+        return UNO_KEYPAIRINO[type];
+    };
+});
+
+const getGhostKey = doBlock(() => {
+    let UNO_KEYPAIRINO;
+    return function getGhostKey(type) {
         if (!UNO_KEYPAIRINO) {
             UNO_KEYPAIRINO = keypair({bits: 1024});
         }
@@ -36,7 +47,10 @@ function parseDefaultSettings() {
             members_session_secret: () => crypto.randomBytes(32).toString('hex'),
             theme_session_secret: () => crypto.randomBytes(32).toString('hex'),
             members_public_key: () => getMembersKey('public'),
-            members_private_key: () => getMembersKey('private')
+            members_private_key: () => getMembersKey('private'),
+            members_email_auth_secret: () => crypto.randomBytes(64).toString('hex'),
+            ghost_public_key: () => getGhostKey('public'),
+            ghost_private_key: () => getGhostKey('private')
         };
 
     _.each(defaultSettingsInCategories, function each(settings, categoryName) {
@@ -235,6 +249,35 @@ Settings = ghostBookshelf.Model.extend({
 
                 return allSettings;
             });
+    },
+
+    permissible: function permissible(modelId, action, context, unsafeAttrs, loadedPermissions, hasUserPermission, hasApiKeyPermission) {
+        let isEdit = (action === 'edit');
+        let isOwner;
+
+        function isChangingMembers() {
+            if (unsafeAttrs && unsafeAttrs.key === 'labs') {
+                let editedValue = JSON.parse(unsafeAttrs.value);
+                if (editedValue.members !== undefined) {
+                    return editedValue.members !== settingsCache.get('labs').members;
+                }
+            }
+        }
+
+        isOwner = loadedPermissions.user && _.some(loadedPermissions.user.roles, {name: 'Owner'});
+
+        if (isEdit && isChangingMembers()) {
+            // Only allow owner to toggle members flag
+            hasUserPermission = isOwner;
+        }
+
+        if (hasUserPermission && hasApiKeyPermission) {
+            return Promise.resolve();
+        }
+
+        return Promise.reject(new common.errors.NoPermissionError({
+            message: common.i18n.t('errors.models.post.notEnoughPermission')
+        }));
     }
 });
 
