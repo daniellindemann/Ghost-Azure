@@ -8,7 +8,7 @@
 
 require('./core/server/overrides');
 
-const config = require('./core/server/config');
+const config = require('./core/shared/config');
 const urlService = require('./core/frontend/services/url');
 const _ = require('lodash');
 const fs = require('fs-extra');
@@ -48,7 +48,7 @@ const configureGrunt = function (grunt) {
     grunt.loadNpmTasks('grunt-subgrunt');
     grunt.loadNpmTasks('grunt-update-submodules');
 
-    var cfg = {
+    const cfg = {
         // #### Common paths used by tasks
         paths: {
             build: buildDirectory,
@@ -85,9 +85,11 @@ const configureGrunt = function (grunt) {
             },
             express: {
                 files: [
-                    'core/ghost-server.js',
                     'core/server/**/*.js',
+                    'core/shared/**/*.js',
                     'core/frontend/**/*.js',
+                    'core/index.js',
+                    'index.js',
                     'config.*.json',
                     '!config.testing.json'
                 ],
@@ -124,9 +126,7 @@ const configureGrunt = function (grunt) {
                 ui: 'bdd',
                 reporter: grunt.option('reporter') || 'spec',
                 timeout: '60000',
-                save: grunt.option('reporter-output'),
                 require: ['core/server/overrides'],
-                retries: '3',
                 exit: true
             },
 
@@ -162,7 +162,7 @@ const configureGrunt = function (grunt) {
                 bg: grunt.option('client') ? false : true,
                 stdout: function (chunk) {
                     // hide certain output to prevent confusion when running alongside server
-                    var filter = grunt.option('client') ? false : [
+                    const filter = grunt.option('client') ? false : [
                         /> ghost-admin/,
                         /^Livereload/,
                         /^Serving on/
@@ -207,14 +207,14 @@ const configureGrunt = function (grunt) {
             },
             master: {
                 command: function () {
-                    var upstream = grunt.option('upstream') || process.env.GHOST_UPSTREAM || 'upstream';
+                    const upstream = grunt.option('upstream') || process.env.GHOST_UPSTREAM || 'upstream';
                     grunt.log.writeln('Pulling down the latest master from ' + upstream);
                     return `
                         git submodule sync
                         git submodule update
 
                         if ! git diff --exit-code --quiet --ignore-submodules=untracked; then
-                            echo "Working directory is not clean, do you have uncommited changes? Please commit, stash or discard changes to continue."
+                            echo "Working directory is not clean, do you have uncommitted changes? Please commit, stash or discard changes to continue."
                             exit 1
                         fi
 
@@ -424,7 +424,7 @@ const configureGrunt = function (grunt) {
     // so that the test environments do not need to build out the client files
     grunt.registerTask('stubClientFiles', function () {
         _.each(cfg.clientFiles, function (file) {
-            var filePath = path.resolve(cwd + '/core/' + file);
+            const filePath = path.resolve(cwd + '/core/' + file);
             fs.ensureFileSync(filePath);
         });
     });
