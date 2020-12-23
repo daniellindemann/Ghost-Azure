@@ -40,13 +40,22 @@ const configureGrunt = function (grunt) {
     grunt.loadNpmTasks('grunt-contrib-compress');
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-contrib-symlink');
-    grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks('grunt-express-server');
     grunt.loadNpmTasks('grunt-mocha-cli');
     grunt.loadNpmTasks('grunt-shell');
     grunt.loadNpmTasks('grunt-subgrunt');
     grunt.loadNpmTasks('grunt-update-submodules');
+
+    /** This little bit of weirdness gives the express server chance to shutdown properly */
+    const waitBeforeExit = () => {
+        setTimeout(() => {
+            process.exit(0);
+        }, 1000);
+    };
+
+    process.on('SIGINT', waitBeforeExit);
+    process.on('SIGTERM', waitBeforeExit);
 
     const cfg = {
         // #### Common paths used by tasks
@@ -270,17 +279,6 @@ const configureGrunt = function (grunt) {
             pinned: {
                 options: {
                     params: '--init'
-                }
-            }
-        },
-
-        uglify: {
-            prod: {
-                options: {
-                    sourceMap: false
-                },
-                files: {
-                    'core/server/public/members.min.js': 'core/server/public/members.js'
                 }
             }
         },
@@ -538,7 +536,7 @@ const configureGrunt = function (grunt) {
     //
     // It is otherwise the same as running `grunt`, but is only used when running Ghost in the `production` env.
     grunt.registerTask('prod', 'Build JS & templates for production',
-        ['subgrunt:prod', 'uglify:prod', 'postcss:prod']);
+        ['subgrunt:prod', 'postcss:prod']);
 
     // ### Live reload
     // `grunt dev` - build assets on the fly whilst developing
@@ -604,9 +602,13 @@ const configureGrunt = function (grunt) {
                 }]
             });
 
+            if (!grunt.option('skip-update')) {
+                grunt.task
+                    .run('update_submodules:pinned')
+                    .run('subgrunt:init');
+            }
+
             grunt.task
-                .run('update_submodules:pinned')
-                .run('subgrunt:init')
                 .run('clean:built')
                 .run('clean:tmp')
                 .run('prod')

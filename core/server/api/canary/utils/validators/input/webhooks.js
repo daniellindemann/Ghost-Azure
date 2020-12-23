@@ -5,7 +5,7 @@ const jsonSchema = require('../utils/json-schema');
 
 module.exports = {
     add(apiConfig, frame) {
-        if (!_.get(frame, 'options.context.api_key.id') && !_.get(frame.data, 'webhooks[0].integration_id')) {
+        if (!_.get(frame, 'options.context.integration.id') && !_.get(frame.data, 'webhooks[0].integration_id')) {
             return Promise.reject(new errors.ValidationError({
                 message: i18n.t('notices.data.validation.index.schemaValidationFailed', {
                     key: 'integration_id'
@@ -15,14 +15,8 @@ module.exports = {
             }));
         }
 
-        const schema = require('./schemas/webhooks-add');
-        const definitions = require('./schemas/webhooks');
-        return jsonSchema.validate(schema, definitions, frame.data);
+        return jsonSchema.validate(apiConfig, frame);
     },
 
-    edit(apiConfig, frame) {
-        const schema = require('./schemas/webhooks-edit');
-        const definitions = require('./schemas/webhooks');
-        return jsonSchema.validate(schema, definitions, frame.data);
-    }
+    edit: jsonSchema.validate
 };
