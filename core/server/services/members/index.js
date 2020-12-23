@@ -1,6 +1,7 @@
 const MembersSSR = require('@tryghost/members-ssr');
 
 const MembersConfigProvider = require('./config');
+const MembersCSVImporter = require('./importer');
 const createMembersApiInstance = require('./api');
 const createMembersSettingsInstance = require('./settings');
 const {events} = require('../../lib/common');
@@ -39,6 +40,8 @@ events.on('settings.edited', function updateSettingFromModel(settingModel) {
     if (![
         'members_allow_free_signup',
         'members_from_address',
+        'members_support_address',
+        'members_reply_address',
         'stripe_publishable_key',
         'stripe_secret_key',
         'stripe_product_name',
@@ -88,7 +91,9 @@ const membersService = {
         getMembersApi: () => membersService.api
     }),
 
-    stripeConnect: require('./stripe-connect')
+    stripeConnect: require('./stripe-connect'),
+
+    importer: new MembersCSVImporter({storagePath: config.getContentPath('data')}, settingsCache, () => membersApi)
 };
 
 module.exports = membersService;
